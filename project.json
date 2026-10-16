@@ -1,12 +1,33 @@
 {
-  "userId": "u_4886111579d6765a",
-  "projectId": "xn-demo",
+  "schemaVersion": 2,
   "name": "xn-demo",
-  "board": {
-    "fqbn": "esp32:esp32:esp32s3"
+  "target": {
+    "framework": "arduino",
+    "board": "esp32:esp32:esp32s3",
+    "options": {
+      "CDCOnBoot": "cdc",
+      "CPUFreq": "240",
+      "DFUOnBoot": "default",
+      "DebugLevel": "none",
+      "EraseFlash": "none",
+      "EventsCore": "1",
+      "FlashMode": "qio",
+      "FlashSize": "16M",
+      "JTAGAdapter": "default",
+      "LoopCore": "1",
+      "MSCOnBoot": "default",
+      "PSRAM": "enabled",
+      "PartitionScheme": "default",
+      "USBMode": "hwcdc",
+      "UploadMode": "default",
+      "UploadSpeed": "921600",
+      "ZigbeeMode": "default"
+    }
   },
-  "selections": null,
   "serial": null,
+  "build": {
+    "properties": []
+  },
   "createdAt": "2026-10-16T11:53:06.405Z",
-  "updatedAt": "2026-10-16T11:53:06.405Z"
+  "updatedAt": "2026-10-16T11:56:59.593Z"
 }

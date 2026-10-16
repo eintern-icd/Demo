@@ -2,8 +2,36 @@
   "version": 2,
   "enforcementLevel": "strict",
   "libraries": {
-    "manager": [],
-    "managerResolved": [],
-    "git": []
+    "manager": [
+      {
+        "name": "LovyanGFX",
+        "version": "1.2.33",
+        "scope": "shared"
+      },
+      {
+        "name": "ModbusMaster",
+        "version": "2.0.1",
+        "scope": "shared"
+      }
+    ],
+    "managerResolved": [
+      {
+        "name": "LovyanGFX",
+        "version": "1.2.33"
+      },
+      {
+        "name": "ModbusMaster",
+        "version": "2.0.1"
+      }
+    ],
+    "git": [
+      {
+        "name": "ModbusMaster",
+        "url": "https://github.com/4-20ma/ModbusMaster",
+        "commit": "3a05ff87677a9bdd8e027d6906dc05ca15ca8ade",
+        "contentSha256": "fb5b9b6a34a9eea03f738b1dbb2874888c1edf4baa795a3ed6eb9d62a8a453bf",
+        "scope": "shared"
+      }
+    ]
   }
 }
