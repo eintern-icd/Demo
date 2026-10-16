@@ -1,0 +1,12 @@
+{
+  "userId": "u_4886111579d6765a",
+  "projectId": "xn-demo",
+  "name": "xn-demo",
+  "board": {
+    "fqbn": "esp32:esp32:esp32s3"
+  },
+  "selections": null,
+  "serial": null,
+  "createdAt": "2026-10-16T11:53:06.405Z",
+  "updatedAt": "2026-10-16T11:53:06.405Z"
+}
