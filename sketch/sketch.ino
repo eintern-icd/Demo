@@ -61,12 +61,12 @@ LGFX_Sprite card(&tft);
 ModbusMaster node;
 
 // ---------------- Configuration ----------------
-#define RS485_RX_PIN     16
-#define RS485_TX_PIN     15
-#define MODBUS_BAUD      9600
-#define MD02_SLAVE_ID    1
-#define POLL_INTERVAL_MS 2000
-#define PUBLISH_INTERVAL_MS 5000
+#define RS485_RX_PIN        16
+#define RS485_TX_PIN        15
+#define MODBUS_BAUD         9600
+#define MD02_SLAVE_ID       1
+#define POLL_INTERVAL_MS    2000
+#define PUBLISH_INTERVAL_MS 600000UL // 10 minutes in milliseconds
 
 // ---------------- Colours ----------------
 #define C_BG       0x0000
@@ -209,14 +209,18 @@ void loop() {
     }
   }
 
-  // Publish data via Norvi.publish every PUBLISH_INTERVAL_MS (5 seconds)
+  // Publish data via Norvi.publish every PUBLISH_INTERVAL_MS (10 minutes)
   if (dataValid && (currentMillis - lastPublish >= PUBLISH_INTERVAL_MS || lastPublish == 0)) {
     lastPublish = currentMillis;
 
-    // Pass floats directly to match Norvi.publish(const char* name, float value)
-    Norvi.publish("temperature", latestTemp);
-    Norvi.publish("humidity", latestHum);
+    char tempStr[12];
+    char humStr[12];
+    snprintf(tempStr, sizeof(tempStr), "%.2f", latestTemp);
+    snprintf(humStr, sizeof(humStr), "%.2f", latestHum);
+
+    Norvi.publish("temperature", tempStr);
+    Norvi.publish("humidity", humStr);
     
-    Serial.println("Published temperature and humidity via Norvi.publish");
+    Serial.println("Published temperature and humidity (2 decimal places)");
   }
 }
