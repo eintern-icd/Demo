@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "name": "xn-demo",
+  "name": "Demo",
   "target": {
     "framework": "arduino",
     "board": "esp32:esp32:esp32s3",
@@ -22,7 +22,8 @@
       "UploadMode": "default",
       "UploadSpeed": "921600",
       "ZigbeeMode": "default"
-    }
+    },
+    "sketchPath": "sketch"
   },
   "serial": null,
   "build": {
