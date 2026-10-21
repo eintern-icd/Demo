@@ -7,6 +7,7 @@
  * RS485  : Serial1  RX=16  TX=15 (auto-direction transceiver)
  */
 #define LGFX_USE_V1
+#include <Norvi.h>
 #include <LovyanGFX.hpp>
 #include <ModbusMaster.h>
 
@@ -18,13 +19,13 @@ public:
   LGFX(void) {
     {
       auto cfg = _bus_instance.config();
-      cfg.spi_host    = SPI2_HOST;
-      cfg.spi_mode    = 0;
-      cfg.freq_write  = 40000000;
-      cfg.freq_read   = 16000000;
-      cfg.spi_3wire   = false;
-      cfg.use_lock    = true;
-      cfg.dma_channel = SPI_DMA_CH_AUTO;
+      cfg.spi_host     = SPI2_HOST;
+      cfg.spi_mode     = 0;
+      cfg.freq_write   = 40000000;
+      cfg.freq_read    = 16000000;
+      cfg.spi_3wire    = false;
+      cfg.use_lock     = true;
+      cfg.dma_channel  = SPI_DMA_CH_AUTO;
       cfg.pin_sclk = 12;
       cfg.pin_mosi = 11;
       cfg.pin_miso = 13;
@@ -34,21 +35,21 @@ public:
     }
     {
       auto cfg = _panel_instance.config();
-      cfg.pin_cs           = 45;
-      cfg.pin_rst          = 47;
-      cfg.pin_busy         = -1;
-      cfg.panel_width      = 240;
-      cfg.panel_height     = 320;
-      cfg.offset_x         = 0;
-      cfg.offset_y         = 0;
-      cfg.offset_rotation  = 0;
+      cfg.pin_cs            = 45;
+      cfg.pin_rst           = 47;
+      cfg.pin_busy          = -1;
+      cfg.panel_width       = 240;
+      cfg.panel_height      = 320;
+      cfg.offset_x          = 0;
+      cfg.offset_y          = 0;
+      cfg.offset_rotation   = 0;
       cfg.dummy_read_pixel = 8;
-      cfg.dummy_read_bits  = 1;
-      cfg.readable         = true;
-      cfg.invert           = true;
-      cfg.rgb_order        = false;
-      cfg.dlen_16bit       = false;
-      cfg.bus_shared       = true;
+      cfg.dummy_read_bits   = 1;
+      cfg.readable          = true;
+      cfg.invert            = true;
+      cfg.rgb_order         = false;
+      cfg.dlen_16bit        = false;
+      cfg.bus_shared        = true;
       _panel_instance.config(cfg);
     }
     setPanel(&_panel_instance);
@@ -65,6 +66,7 @@ ModbusMaster node;
 #define MODBUS_BAUD      9600
 #define MD02_SLAVE_ID    1
 #define POLL_INTERVAL_MS 2000
+#define PUBLISH_INTERVAL_MS 5000
 
 // ---------------- Colours ----------------
 #define C_BG       0x0000
@@ -78,6 +80,11 @@ ModbusMaster node;
 uint32_t okCount = 0, errCount = 0;
 float    divisor = 10.0f;   // datasheet scale; auto-corrected to 100 if sensor reports x100
 bool     scaleLocked = false;
+
+// Variables to hold latest readings for cloud publishing
+float latestTemp = 0.0f;
+float latestHum = 0.0f;
+bool dataValid = false;
 
 // ---------------- UI helpers ----------------
 void drawHeader() {
@@ -160,40 +167,65 @@ void setup() {
 
 // ---------------- Loop ----------------
 void loop() {
-  static uint32_t last = 0;
-  if (millis() - last < POLL_INTERVAL_MS && last != 0) return;
-  last = millis();
+  static uint32_t lastPoll = 0;
+  static uint32_t lastPublish = 0;
+  uint32_t currentMillis = millis();
 
-  // FC 0x04, start 0x0001, qty 2 -> temperature, humidity
-  uint8_t result = node.readInputRegisters(0x0001, 2);
+  // Poll sensor at POLL_INTERVAL_MS (2 seconds)
+  if (currentMillis - lastPoll >= POLL_INTERVAL_MS || lastPoll == 0) {
+    lastPoll = currentMillis;
 
-  if (result == node.ku8MBSuccess) {
-    int16_t  tempRaw = (int16_t)node.getResponseBuffer(0);   // signed per datasheet
-    uint16_t humRaw  = node.getResponseBuffer(1);
+    // FC 0x04, start 0x0001, qty 2 -> temperature, humidity
+    uint8_t result = node.readInputRegisters(0x0001, 2);
 
-    // Datasheet scale is x10 (546 -> 54.6 %RH). Some MD02 firmwares report x100.
-    // Humidity can't exceed 100.0 %RH, so a raw value > 1000 means x100 scaling.
-    if (!scaleLocked) {
-      divisor = (humRaw > 1000) ? 100.0f : 10.0f;
-      scaleLocked = true;
-      Serial.printf("Scale detected: /%.0f\n", divisor);
+    if (result == node.ku8MBSuccess) {
+      int16_t  tempRaw = (int16_t)node.getResponseBuffer(0);   // signed per datasheet
+      uint16_t humRaw  = node.getResponseBuffer(1);
+
+      if (!scaleLocked) {
+        divisor = (humRaw > 1000) ? 100.0f : 10.0f;
+        scaleLocked = true;
+        Serial.printf("Scale detected: /%.0f\n", divisor);
+      }
+
+      latestTemp = tempRaw / divisor;
+      latestHum  = humRaw  / divisor;
+      dataValid = true;
+      okCount++;
+
+      char t[12], h[12];
+      snprintf(t, sizeof(t), "%.1f", latestTemp);
+      snprintf(h, sizeof(h), "%.1f", latestHum);
+      drawValueCard(60,  "TEMPERATURE", t, "C",   C_TEMP);
+      drawValueCard(175, "HUMIDITY",    h, "%RH", C_HUM);
+      drawStatus(true, result);
+
+      Serial.printf("T=%.1f C  RH=%.1f %%  (raw %d / %u)\n", latestTemp, latestHum, tempRaw, humRaw);
+    } else {
+      dataValid = false;
+      errCount++;
+      drawStatus(false, result);
+      Serial.printf("Modbus read failed, code 0x%02X\n", result);
     }
+  }
 
-    float tempC = tempRaw / divisor;
-    float hum   = humRaw  / divisor;
-    okCount++;
+  // Publish data via Norvi.publish every PUBLISH_INTERVAL_MS (5 seconds)
+  if (dataValid && (currentMillis - lastPublish >= PUBLISH_INTERVAL_MS || lastPublish == 0)) {
+    lastPublish = currentMillis;
 
-    char t[12], h[12];
-    snprintf(t, sizeof(t), "%.1f", tempC);
-    snprintf(h, sizeof(h), "%.1f", hum);
-    drawValueCard(60,  "TEMPERATURE", t, "C",   C_TEMP);
-    drawValueCard(175, "HUMIDITY",    h, "%RH", C_HUM);
-    drawStatus(true, result);
+    char tempStr[12];
+    char humStr[12];
+    snprintf(tempStr, sizeof(tempStr), "%.1f", latestTemp);
+    snprintf(humStr, sizeof(humStr), "%.1f", latestHum);
 
-    Serial.printf("T=%.1f C  RH=%.1f %%  (raw %d / %u)\n", tempC, hum, tempRaw, humRaw);
-  } else {
-    errCount++;
-    drawStatus(false, result);
-    Serial.printf("Modbus read failed, code 0x%02X\n", result);
+    Norvi.publish("temperature", tempStr);
+    Norvi.publish("humidity", humStr);
+    
+    Serial.println("Published temperature and humidity via Norvi.publish");
   }
 }
+```[cite: 2]
+
+<FollowUp>
+Would you like to verify the publishing interval or test uploading this code?
+</FollowUp>
