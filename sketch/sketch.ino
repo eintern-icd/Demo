@@ -224,8 +224,3 @@ void loop() {
     Serial.println("Published temperature and humidity via Norvi.publish");
   }
 }
-```[cite: 2]
-
-<FollowUp>
-Would you like to verify the publishing interval or test uploading this code?
-</FollowUp>
