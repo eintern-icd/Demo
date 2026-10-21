@@ -213,13 +213,9 @@ void loop() {
   if (dataValid && (currentMillis - lastPublish >= PUBLISH_INTERVAL_MS || lastPublish == 0)) {
     lastPublish = currentMillis;
 
-    char tempStr[12];
-    char humStr[12];
-    snprintf(tempStr, sizeof(tempStr), "%.1f", latestTemp);
-    snprintf(humStr, sizeof(humStr), "%.1f", latestHum);
-
-    Norvi.publish("temperature", tempStr);
-    Norvi.publish("humidity", humStr);
+    // Pass floats directly to match Norvi.publish(const char* name, float value)
+    Norvi.publish("temperature", latestTemp);
+    Norvi.publish("humidity", latestHum);
     
     Serial.println("Published temperature and humidity via Norvi.publish");
   }
