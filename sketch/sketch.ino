@@ -66,7 +66,7 @@ ModbusMaster node;
 #define MODBUS_BAUD      9600
 #define MD02_SLAVE_ID    1
 #define POLL_INTERVAL_MS 2000
-#define PUBLISH_INTERVAL_MS 5000
+#define PUBLISH_INTERVAL_MS 600000 // 10 minutes (10 * 60 * 1000 ms)
 
 // ---------------- Colours ----------------
 #define C_BG       0x0000
@@ -209,7 +209,7 @@ void loop() {
     }
   }
 
-  // Publish data via Norvi.publish every PUBLISH_INTERVAL_MS (5 seconds)
+  // Publish data via Norvi.publish every PUBLISH_INTERVAL_MS (10 minutes)
   if (dataValid && (currentMillis - lastPublish >= PUBLISH_INTERVAL_MS || lastPublish == 0)) {
     lastPublish = currentMillis;
 
